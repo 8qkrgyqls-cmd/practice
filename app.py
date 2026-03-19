@@ -70,6 +70,3 @@ else:
     fig = px.line(df, x="지역", y=["면역율_24", "면역율_25"], markers=True, title="2024 vs 2025 면역율 변화")
 
 st.plotly_chart(fig, use_container_width=True)
-    * **유니버설 백신**: 주요 호흡기 바이러스 통합 '멀티-콤보 백신' 개발 [cite: 129]
-    * **글로벌 조기 경보**: 국제 하수 역학 감시망(GWSN) 주도 [cite: 132]
-    """)
