@@ -1,75 +1,65 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
 
 # --- 1. 페이지 설정 ---
-st.set_page_config(page_title="River Pulse Pro", layout="wide")
+st.set_page_config(page_title="Han River Quality Map", layout="wide")
 
-# --- 2. 데이터 로드 함수 (인코딩 & 데이터 타입 클리닝) ---
 def load_data(file):
     if file is None: return None
     for enc in ['utf-8', 'cp949', 'euc-kr']:
         try:
             file.seek(0)
             df = pd.read_csv(file, encoding=enc)
-            # 숫자가 아닌 값이 섞여있을 경우를 대비해 처리 (노량진, 선유 컬럼)
             for col in ["노량진", "선유"]:
                 if col in df.columns:
-                    # 숫자로 변환, 변환 안되는 문자열은 NaN(빈값) 처리
                     df[col] = pd.to_numeric(df[col], errors='coerce')
             return df
-        except:
-            continue
+        except: continue
     return None
 
-# --- 3. 사이드바 ---
-st.sidebar.title("🌊 River Pulse")
+# --- 2. 사이드바 데이터 업로드 ---
+st.sidebar.title("🌊 River Pulse Pro")
 up_do = st.sidebar.file_uploader("용존산소(DO) 파일", type=['csv'])
 up_ph = st.sidebar.file_uploader("수소이온농도(pH) 파일", type=['csv'])
 
 if up_do and up_ph:
     df_do = load_data(up_do)
     df_ph = load_data(up_ph)
-    
-    # '일시' 컬럼 처리 및 빈 값 제거
     df_do['일시'] = pd.to_datetime(df_do['일시'])
     df_ph['일시'] = pd.to_datetime(df_ph['일시'])
+
+    # --- 3. 인터랙티브 지도 (Mapbox) ---
+    st.title("📍 한강 수질 모니터링 맵")
+    st.markdown("지도 위 포인트에 **마우스를 올리면(Hover)** 해당 지점의 최신 정보를 확인할 수 있습니다.")
+
+    # 지점별 좌표 및 최신 데이터 결합
+    map_data = pd.DataFrame({
+        '지점': ['노량진', '선유'],
+        'lat': [37.5175, 37.5451],  # 실제 노량진, 선유 인근 위도
+        'lon': [126.9413, 126.8991], # 실제 경도
+        '최근 DO': [df_do['노량진'].iloc[-1], df_do['선유'].iloc[-1]],
+        '최근 pH': [df_ph['노량진'].iloc[-1], df_ph['선유'].iloc[-1]],
+        '평균 DO': [df_do['노량진'].mean(), df_do['선유'].mean()]
+    })
+
+    fig_map = px.scatter_mapbox(
+        map_data, lat="lat", lon="lon", text="지점", 
+        color="최근 DO", size="최근 DO",
+        color_continuous_scale=px.colors.cyclical.IceFire, 
+        size_max=15, zoom=11,
+        hover_name="지점",
+        hover_data={"lat": False, "lon": False, "최근 DO": True, "최근 pH": True, "평균 DO": ":.2f"}
+    )
     
-    location = st.sidebar.selectbox("📍 분석 지점 선택", ["노량진", "선유"])
-    
-    # --- 핵심 에러 방지 구간 ---
-    # 마지막 값이 NaN(빈값)일 수 있으므로 마지막 유효한 숫자를 가져옵니다.
-    valid_do = df_do[location].dropna()
-    valid_ph = df_ph[location].dropna()
+    # 지도 스타일 설정 (Open Street Map)
+    fig_map.update_layout(mapbox_style="open-street-map")
+    fig_map.update_layout(margin={"r":0,"t":0,"l":0,"b":0})
+    st.plotly_chart(fig_map, use_container_width=True)
 
-    if not valid_do.empty and not valid_ph.empty:
-        latest_do = valid_do.iloc[-1]
-        latest_ph = valid_ph.iloc[-1]
+    st.divider()
 
-        st.title(f"📊 {location} 지점 실시간 보고서")
-        
-        m1, m2, m3 = st.columns(3)
-        with m1:
-            st.metric("최근 용존산소(DO)", f"{latest_do:.2f} mg/L")
-        with m2:
-            st.metric("최근 pH 농도", f"{latest_ph:.2f}")
-        with m3:
-            # 안전하게 비교 연산 수행
-            status = "✅ 우수" if latest_do >= 7.0 else "⚠️ 점검 필요"
-            st.metric("수질 등급", status)
-
-        st.divider()
-
-        # 차트 시각화
-        c1, c2 = st.columns(2)
-        with c1:
-            fig1 = px.line(df_do, x='일시', y=location, title="용존산소 추이", template="plotly_white")
-            st.plotly_chart(fig1, use_container_width=True)
-        with c2:
-            fig2 = px.area(df_ph, x='일시', y=location, title="pH 농도 추이", color_discrete_sequence=['green'])
-            st.plotly_chart(fig2, use_container_width=True)
-    else:
-        st.error("선택한 지점에 유효한 수치 데이터가 없습니다.")
-
-else:
-    st.info("👈 사이드바에 데이터를 업로드하면 분석이 시작됩니다.")
+    # --- 4. AM/PM 막대 그래프 ---
+    st.subheader("☀️ AM vs 🌙 PM 수질 분석")
+    for df in [df_do, df_ph]:
