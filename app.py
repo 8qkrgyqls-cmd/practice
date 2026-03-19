@@ -1,87 +1,85 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
 
-# --- 페이지 설정 ---
-st.set_page_config(page_title="River Pulse | 수질 모니터링", layout="wide")
+# --- 설정 ---
+st.set_page_config(page_title="River Pulse 2.0", layout="wide")
 
-# --- 스타일링 (CSS) ---
+# --- 인코딩 안전 로드 함수 ---
+def load_data_safe(file):
+    if file is None: return None
+    encodings = ['utf-8', 'cp949', 'euc-kr']
+    for enc in encodings:
+        try:
+            file.seek(0)
+            return pd.read_csv(file, encoding=enc)
+        except:
+            continue
+    return None
+
+# --- UI 디자인 ---
 st.markdown("""
     <style>
-    .main { background-color: #f8f9fa; }
-    .stMetric { background-color: #ffffff; padding: 15px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+    .main { background-color: #F0F2F6; }
+    .stMetric { border: 1px solid #E0E0E0; padding: 10px; border-radius: 10px; background: white; }
     </style>
-    """, unsafe_allow_html=True)
+""", unsafe_allow_html=True)
 
-# --- 상단 타이틀 ---
-st.title("🌊 River Pulse: 한강 수질 분석 대시보드")
-st.info("왼쪽 사이드바에서 '용존산소.csv'와 '수소이온농도.csv' 파일을 업로드해주세요.")
+st.title("🌊 River Pulse : 한강 수질 실시간 모니터링")
+st.caption("공공 데이터를 활용한 노량진/선유 지점 수질 분석 포트폴리오")
 
-# --- 사이드바: 파일 업로드 ---
-st.sidebar.header("📁 데이터 업로드")
-uploaded_do = st.sidebar.file_uploader("용존산소.csv 업로드", type=['csv'])
-uploaded_ph = st.sidebar.file_uploader("수소이온농도.csv 업로드", type=['csv'])
+# 사이드바
+st.sidebar.header("📁 데이터 소스")
+up_do = st.sidebar.file_uploader("용존산소(DO) CSV", type=['csv'])
+up_ph = st.sidebar.file_uploader("수소이온농도(pH) CSV", type=['csv'])
 
-# --- 데이터 처리 로직 ---
-if uploaded_do and uploaded_ph:
-    try:
-        # 데이터 읽기
-        df_do = pd.read_csv(uploaded_do)
-        df_ph = pd.read_csv(uploaded_ph)
+if up_do and up_ph:
+    df_do = load_data_safe(up_do)
+    df_ph = load_data_safe(up_ph)
+    
+    # 전처리
+    df_do['일시'] = pd.to_datetime(df_do['일시'])
+    df_ph['일시'] = pd.to_datetime(df_ph['일시'])
+    
+    # 필터
+    st.sidebar.divider()
+    target = st.sidebar.radio("🎯 분석 타겟 지점", ["노량진", "선유"])
+    
+    # --- 메인 대시보드 ---
+    col1, col2, col4 = st.columns([1, 1, 2])
+    
+    current_do = df_do[target].iloc[-1]
+    current_ph = df_ph[target].iloc[-1]
+    
+    with col1:
+        st.metric("최근 용존산소", f"{current_do} mg/L")
+    with col2:
+        st.metric("최근 pH 농도", f"{current_ph} pH")
+    with col4:
+        # 간단한 수질 등급 판정 (DO 기준 예시)
+        grade = "매우 좋음" if current_do >= 7.5 else "보통"
+        st.success(f"현재 {target} 지점의 수질 상태는 **'{grade}'** 단계입니다.")
+
+    st.divider()
+
+    # 시각화 (인터랙티브 차트)
+    tab1, tab2 = st.tabs(["📈 시계열 트렌드", "🌗 상관관계 분석"])
+    
+    with tab1:
+        # Plotly를 활용한 이중 축 그래프 (DO & pH를 한 번에)
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=df_do['일시'], y=df_do[target], name="DO (용존산소)", line=dict(color='#00b894')))
+        fig.add_trace(go.Scatter(x=df_ph['일시'], y=df_ph[target], name="pH (수소농도)", yaxis="y2", line=dict(color='#0984e3')))
         
-        # 날짜 변환 (에러 방지용)
-        df_do['일시'] = pd.to_datetime(df_do['일시'])
-        df_ph['일시'] = pd.to_datetime(df_ph['일시'])
+        fig.update_layout(
+            title=f"{target} 지점 수질 지표 통합 추이",
+            yaxis=dict(title="DO (mg/L)"),
+            yaxis2=dict(title="pH", overlaying="y", side="right"),
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+        )
+        st.plotly_chart(fig, use_container_width=True)
 
-        # --- 사이드바 필터 ---
-        st.sidebar.divider()
-        st.sidebar.header("📍 필터 설정")
-        location = st.sidebar.selectbox("분석 지점 선택", ["노량진", "선유"])
-        
-        min_date = df_do['일시'].min().date()
-        max_date = df_do['일시'].max().date()
-        
-        date_range = st.sidebar.date_input("조회 기간", [min_date, max_date])
-
-        # 기간 필터링
-        mask = (df_do['일시'].dt.date >= date_range[0]) & (df_do['일시'].dt.date <= date_range[1])
-        f_do = df_do.loc[mask]
-        f_ph = df_ph.loc[mask]
-
-        # --- 메인 화면: Metric ---
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            st.metric("평균 DO (mg/L)", round(f_do[location].mean(), 2))
-        with col2:
-            st.metric("평균 pH", round(f_ph[location].mean(), 2))
-        with col3:
-            status = "🔴 주의" if f_do[location].mean() < 5 else "🟢 양호"
-            st.metric("수질 상태", status)
-
-        # --- 시각화 ---
-        st.divider()
+    with tab2:
         c1, c2 = st.columns(2)
-        
         with c1:
-            st.subheader(f"📈 {location} 용존산소 추이")
-            fig1 = px.area(f_do, x='일시', y=location, color_discrete_sequence=['#00a8ff'])
-            st.plotly_chart(fig1, use_container_width=True)
-
-        with c2:
-            st.subheader(f"📉 {location} pH 농도 추이")
-            fig2 = px.line(f_ph, x='일시', y=location, color_discrete_sequence=['#4cd137'])
-            st.plotly_chart(fig2, use_container_width=True)
-
-        # --- 지점 비교 (박스플롯) ---
-        st.subheader("📊 지점별 수질 데이터 분포 비교")
-        compare_df = f_do.melt(id_vars='일시', var_name='지점', value_name='DO')
-        fig3 = px.box(compare_df, x='지점', y='DO', color='지점', points="all")
-        st.plotly_chart(fig3, use_container_width=True)
-
-    except Exception as e:
-        st.error(f"데이터 처리 중 오류가 발생했습니다: {e}")
-        st.warning("CSV 파일의 컬럼명이 '일시', '노량진', '선유'로 되어 있는지 확인해주세요.")
-else:
-    st.warning("분석을 시작하려면 파일을 업로드해주세요.")
-    # 포트폴리오 느낌을 위해 샘플 이미지나 설명을 넣을 수 있습니다.
-    st.image("https://images.unsplash.com/photo-1502737224383-ed3a350700ae?auto=format&fit=crop&w=1000&q=80", caption="River Water Quality Analysis System")
