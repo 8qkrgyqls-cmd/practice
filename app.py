@@ -7,6 +7,7 @@ import os, csv
 from collections import defaultdict
 import folium
 from streamlit_folium import st_folium
+from streamlit_autorefresh import st_autorefresh
 
 st.set_page_config(
     page_title="한강 수질 분석 · 2020–2050",
@@ -1350,8 +1351,9 @@ with tab5:
             horizontal=False, key="sc_toggle", label_visibility="collapsed"
         )
 
-    # 자동재생 프로그레스 바 (슬라이드 위에 표시)
+    # 자동재생: st_autorefresh가 3초마다 페이지를 rerun → 슬라이드 전진
     if st.session_state.auto_on:
+        st_autorefresh(interval=3000, key="slide_refresh")
         st.markdown(
             '''<div style="height:4px;background:#e2e8f0;border-radius:99px;
             overflow:hidden;margin-bottom:8px">
@@ -1483,15 +1485,12 @@ with tab5:
 
     st.markdown(tl_html, unsafe_allow_html=True)
 
-    # ── 자동재생: 슬라이드 렌더링 완료 후 sleep → rerun (화면이 먼저 보임) ──
+    # ── 자동재생: st_autorefresh rerun 시 슬라이드 전진 ────────────────────
     if st.session_state.auto_on:
-        import time
-        time.sleep(3)
         if st.session_state.slide_idx < len(SLIDES) - 1:
             st.session_state.slide_idx += 1
         else:
-            st.session_state.auto_on = False  # 마지막 슬라이드 → 정지
-        st.rerun()
+            st.session_state.auto_on = False  # 마지막 슬라이드 → 자동 정지
 
 
     st.divider()
