@@ -1288,12 +1288,11 @@ function startProgress() {{
   bar.style.width = '0%';
   clearInterval(progInterval);
   progInterval = setInterval(() => {{
-    progPct += 2;  // 50ms * 2 = 3000ms / 50ms = 60 ticks → 60*2=120% so 3s
-    // 실제: 50ms마다 1.67% 증가 → 60틱 = 100%
-    const pct = (progPct / 60) * 100;
+    progPct += 1;  // 50ms마다 1씩 증가 → 100틱 = 5초
+    const pct = progPct;
     bar.style.transition = 'none';
     bar.style.width = Math.min(pct, 100) + '%';
-    if (progPct >= 60) {{
+    if (progPct >= 100) {{
       progPct = 0;
       bar.style.width = '0%';
       nextSlide();
