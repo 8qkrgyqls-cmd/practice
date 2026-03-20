@@ -1351,9 +1351,16 @@ with tab5:
             horizontal=False, key="sc_toggle", label_visibility="collapsed"
         )
 
-    # 자동재생: st_autorefresh가 3초마다 페이지를 rerun → 슬라이드 전진
+    # ── 자동재생: st_autorefresh 카운트로 슬라이드 인덱스 직접 계산 ──────────
+    # st_autorefresh는 3초마다 rerun하고 누적 카운트를 반환함
+    # 카운트 % 슬라이드수 로 인덱스를 계산하면 rerun마다 정확히 1칸씩 이동
     if st.session_state.auto_on:
-        st_autorefresh(interval=3000, key="slide_refresh")
+        count = st_autorefresh(interval=3000, limit=len(SLIDES), key="slide_refresh")
+        # count는 0부터 시작 → 첫 rerun에서 1이 됨
+        new_auto_idx = min(count, len(SLIDES) - 1)
+        st.session_state.slide_idx = new_auto_idx
+        if count >= len(SLIDES) - 1:
+            st.session_state.auto_on = False  # 마지막 슬라이드 도달 → 정지
         st.markdown(
             '''<div style="height:4px;background:#e2e8f0;border-radius:99px;
             overflow:hidden;margin-bottom:8px">
@@ -1362,7 +1369,6 @@ with tab5:
             <style>@keyframes apFill{from{width:0%}to{width:100%}}</style>''',
             unsafe_allow_html=True
         )
-
 
     # ── 현재 슬라이드 데이터 ─────────────────────────────────────────────────
     idx     = st.session_state.slide_idx
@@ -1485,12 +1491,7 @@ with tab5:
 
     st.markdown(tl_html, unsafe_allow_html=True)
 
-    # ── 자동재생: st_autorefresh rerun 시 슬라이드 전진 ────────────────────
-    if st.session_state.auto_on:
-        if st.session_state.slide_idx < len(SLIDES) - 1:
-            st.session_state.slide_idx += 1
-        else:
-            st.session_state.auto_on = False  # 마지막 슬라이드 → 자동 정지
+
 
 
     st.divider()
