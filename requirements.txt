@@ -4,3 +4,5 @@ numpy>=1.26.0
 plotly>=5.20.0
 folium>=0.16.0
 streamlit-folium>=0.20.0
+streamlit-autorefresh>=1.0.1
+ 
