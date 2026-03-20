@@ -1390,72 +1390,73 @@ with tab5:
     """
 
     # 지표 카드 (SSP245 / SSP585)
+    # ── 지표 카드 블록: 항상 grid 열고, 조건별로 카드 추가 후 grid 닫기 ──────
+    tl_html += '<div class="slide-metrics">'
+
     if sc_toggle in ["양쪽 비교", "SSP2-4.5"]:
         ny_bar245 = int(v245_ny / 12.5 * 100)
         sy_bar245 = int(v245_sy / 12.5 * 100)
         tl_html += f"""
-        <div class="slide-metrics">
-            <div class="slide-metric-card">
-                <div class="smc-top">
-                    <span class="smc-title">DO · SSP2-4.5</span>
-                    <span class="smc-badge" style="background:#dbeafe;color:#1d4ed8">중위 시나리오</span>
-                </div>
-                <div class="smc-row">
-                    <span class="smc-station">노량진</span>
-                    <span>
-                        <span class="smc-val" style="color:{do_bar_color(v245_ny)}">{v245_ny:.2f}</span>
-                        <span class="smc-unit"> mg/L</span>
-                        <span style="font-size:11px;color:#64748b;margin-left:4px">({delta_245_ny:+.2f})</span>
-                    </span>
-                </div>
-                <div class="smc-bar-wrap"><div class="smc-bar" style="width:{ny_bar245}%;background:{do_bar_color(v245_ny)}"></div></div>
-                <div class="smc-row" style="margin-top:10px">
-                    <span class="smc-station">선유</span>
-                    <span>
-                        <span class="smc-val" style="color:{do_bar_color(v245_sy)}">{v245_sy:.2f}</span>
-                        <span class="smc-unit"> mg/L</span>
-                    </span>
-                </div>
-                <div class="smc-bar-wrap"><div class="smc-bar" style="width:{sy_bar245}%;background:{do_bar_color(v245_sy)}"></div></div>
-                <div style="margin-top:10px;font-size:11px;color:#64748b">
-                    pH 노량진 <b style="color:#2563eb">{p245_ny:.3f}</b> &nbsp;|&nbsp; 선유 <b style="color:#2563eb">{p245_sy:.3f}</b>
-                </div>
-            </div>"""
+        <div class="slide-metric-card">
+            <div class="smc-top">
+                <span class="smc-title">DO · SSP2-4.5</span>
+                <span class="smc-badge" style="background:#dbeafe;color:#1d4ed8">중위 시나리오</span>
+            </div>
+            <div class="smc-row">
+                <span class="smc-station">노량진</span>
+                <span>
+                    <span class="smc-val" style="color:{do_bar_color(v245_ny)}">{v245_ny:.2f}</span>
+                    <span class="smc-unit"> mg/L</span>
+                    <span style="font-size:11px;color:#64748b;margin-left:4px">({delta_245_ny:+.2f})</span>
+                </span>
+            </div>
+            <div class="smc-bar-wrap"><div class="smc-bar" style="width:{ny_bar245}%;background:{do_bar_color(v245_ny)}"></div></div>
+            <div class="smc-row" style="margin-top:10px">
+                <span class="smc-station">선유</span>
+                <span>
+                    <span class="smc-val" style="color:{do_bar_color(v245_sy)}">{v245_sy:.2f}</span>
+                    <span class="smc-unit"> mg/L</span>
+                </span>
+            </div>
+            <div class="smc-bar-wrap"><div class="smc-bar" style="width:{sy_bar245}%;background:{do_bar_color(v245_sy)}"></div></div>
+            <div style="margin-top:10px;font-size:11px;color:#64748b">
+                pH 노량진 <b style="color:#2563eb">{p245_ny:.3f}</b> &nbsp;|&nbsp; 선유 <b style="color:#2563eb">{p245_sy:.3f}</b>
+            </div>
+        </div>"""
 
     if sc_toggle in ["양쪽 비교", "SSP5-8.5"]:
         ny_bar585 = int(v585_ny / 12.5 * 100)
         sy_bar585 = int(v585_sy / 12.5 * 100)
         delta_585_ny_str = f"{(v585_ny - BASE['do_ny']):+.2f}"
         tl_html += f"""
-            <div class="slide-metric-card">
-                <div class="smc-top">
-                    <span class="smc-title">DO · SSP5-8.5</span>
-                    <span class="smc-badge" style="background:#fee2e2;color:#b91c1c">고위 시나리오</span>
-                </div>
-                <div class="smc-row">
-                    <span class="smc-station">노량진</span>
-                    <span>
-                        <span class="smc-val" style="color:{do_bar_color(v585_ny)}">{v585_ny:.2f}</span>
-                        <span class="smc-unit"> mg/L</span>
-                        <span style="font-size:11px;color:#64748b;margin-left:4px">({delta_585_ny_str})</span>
-                    </span>
-                </div>
-                <div class="smc-bar-wrap"><div class="smc-bar" style="width:{ny_bar585}%;background:{do_bar_color(v585_ny)}"></div></div>
-                <div class="smc-row" style="margin-top:10px">
-                    <span class="smc-station">선유</span>
-                    <span>
-                        <span class="smc-val" style="color:{do_bar_color(v585_sy)}">{v585_sy:.2f}</span>
-                        <span class="smc-unit"> mg/L</span>
-                    </span>
-                </div>
-                <div class="smc-bar-wrap"><div class="smc-bar" style="width:{ny_bar585}%;background:{do_bar_color(v585_sy)}"></div></div>
-                <div style="margin-top:10px;font-size:11px;color:#64748b">
-                    pH 노량진 <b style="color:#dc2626">{p585_ny:.3f}</b> &nbsp;|&nbsp; 선유 <b style="color:#dc2626">{p585_sy:.3f}</b>
-                </div>
+        <div class="slide-metric-card">
+            <div class="smc-top">
+                <span class="smc-title">DO · SSP5-8.5</span>
+                <span class="smc-badge" style="background:#fee2e2;color:#b91c1c">고위 시나리오</span>
+            </div>
+            <div class="smc-row">
+                <span class="smc-station">노량진</span>
+                <span>
+                    <span class="smc-val" style="color:{do_bar_color(v585_ny)}">{v585_ny:.2f}</span>
+                    <span class="smc-unit"> mg/L</span>
+                    <span style="font-size:11px;color:#64748b;margin-left:4px">({delta_585_ny_str})</span>
+                </span>
+            </div>
+            <div class="smc-bar-wrap"><div class="smc-bar" style="width:{ny_bar585}%;background:{do_bar_color(v585_ny)}"></div></div>
+            <div class="smc-row" style="margin-top:10px">
+                <span class="smc-station">선유</span>
+                <span>
+                    <span class="smc-val" style="color:{do_bar_color(v585_sy)}">{v585_sy:.2f}</span>
+                    <span class="smc-unit"> mg/L</span>
+                </span>
+            </div>
+            <div class="smc-bar-wrap"><div class="smc-bar" style="width:{ny_bar585}%;background:{do_bar_color(v585_sy)}"></div></div>
+            <div style="margin-top:10px;font-size:11px;color:#64748b">
+                pH 노량진 <b style="color:#dc2626">{p585_ny:.3f}</b> &nbsp;|&nbsp; 선유 <b style="color:#dc2626">{p585_sy:.3f}</b>
             </div>
         </div>"""
-    elif sc_toggle == "SSP2-4.5":
-        tl_html += '</div>'
+
+    tl_html += '</div>'  # .slide-metrics 닫기
 
     # 경고 배너
     warn_msgs = {
