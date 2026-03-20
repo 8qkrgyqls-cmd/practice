@@ -729,35 +729,318 @@ with tab3:
       </div></div>""", unsafe_allow_html=True)
 
 with tab4:
-    st.markdown('<div class="sec-hd">수질 데이터 심층 해석</div>', unsafe_allow_html=True)
-    insights = [
-        ("blue","봄철 pH 급등 — 식물성 플랑크톤 광합성",
-         """<span class="badge b-blue">3–4월</span> 두 지점 모두 pH 연중 최고치(노량진 <b>8.3</b>, 선유 <b>8.4</b>)를 기록합니다.
-         수온 상승 → 플랑크톤 폭발 증식 → 광합성으로 CO₂ 소비 → 탄산(H₂CO₃) 감소 → 수소이온 농도 하락 → pH 상승의 연쇄입니다.
-         봄철 오후 14–18시에 일중 pH 편차가 최대 <b>1.0 이상</b> 벌어지는 것도 같은 원리입니다."""),
-        ("red","여름철 DO 위기 — 수생태계 스트레스 구간",
-         """<span class="badge b-red">5월 말 – 9월</span> 노량진 6월 평균 DO <b>5.95 mg/L</b>, 선유 <b>5.51 mg/L</b>로 급락합니다.
-         순간 최솟값은 노량진 <b>2.1 mg/L</b>, 선유 <b>2.0 mg/L</b>까지 떨어졌습니다.<br><br>
-         <b>원인 ①</b> 수온 상승 → 산소 용해도 감소 (20°C: 9.1 → 30°C: 7.5 mg/L)<br>
-         <b>원인 ②</b> 봄 플랑크톤 사체 분해 → 박테리아 대량 산소 소비"""),
-        ("green","겨울철 DO 최고치 — 차가운 물의 산소 포화",
-         """<span class="badge b-green">11–12월</span> 노량진 12월 평균 <b>11.17 mg/L</b>, 선유 <b>10.91 mg/L</b>.
-         수온이 낮을수록 기체 용해도가 높아져 DO가 최고치입니다."""),
-        ("orange","노량진 vs 선유 — 공간적 수질 차이",
-         """선유는 노량진에 비해 계절 변동폭이 큽니다 (pH 연간 범위 <b>1.8</b> vs <b>1.5</b>).
-         <br><br><span class="badge b-orange">주의</span> 선유 8월 유효 측정치 424건(정상 730건의 58%)으로 대폭 감소합니다."""),
-        ("purple","환경부 수질 등급 평가",
-         """<table class="grade-table">
-           <tr><th>등급</th><th>pH</th><th>DO (mg/L)</th><th>용도</th><th>2020 한강</th></tr>
-           <tr><td><span class="badge b-blue">1등급</span></td><td>6.5–8.5</td><td>≥ 7.5</td><td>상수원·자연보전</td><td>10–4월 ✓</td></tr>
-           <tr><td><span class="badge b-green">2등급</span></td><td>6.5–8.5</td><td>≥ 5.0</td><td>1급 정수처리</td><td>봄·가을</td></tr>
-           <tr><td><span class="badge b-orange">3등급</span></td><td>6.5–8.5</td><td>≥ 5.0</td><td>농업·수산용수</td><td>여름 경계</td></tr>
-           <tr><td><span class="badge b-red">4등급↓</span></td><td>6.0–8.5</td><td>≥ 2.0</td><td>공업용수</td><td>6월 순간값</td></tr>
-         </table>"""),
+    # ── 달력 전용 스타일 ──────────────────────────────────────────────────────
+    st.markdown("""
+    <style>
+    /* 달력 외부 래퍼 */
+    .cal-wrap {
+        background: #fff;
+        border-radius: 20px;
+        box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+        overflow: hidden;
+        margin-bottom: 24px;
+    }
+    /* 달력 헤더 */
+    .cal-header {
+        background: linear-gradient(135deg, #0c1e3c, #1e4d7b);
+        padding: 20px 28px 16px;
+        display: flex; align-items: center; justify-content: space-between;
+    }
+    .cal-header-title {
+        font-size: 18px; font-weight: 900; color: #fff; letter-spacing: -0.3px;
+    }
+    .cal-header-sub {
+        font-size: 12px; color: rgba(255,255,255,0.55); margin-top: 3px;
+    }
+    .cal-legend {
+        display: flex; gap: 12px; flex-wrap: wrap;
+    }
+    .cal-legend-item {
+        display: flex; align-items: center; gap: 5px;
+        font-size: 11px; color: rgba(255,255,255,0.75); font-weight: 600;
+    }
+    .cal-legend-dot {
+        width: 10px; height: 10px; border-radius: 50%;
+    }
+    /* 달력 그리드 */
+    .cal-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 0;
+    }
+    /* 개별 월 셀 */
+    .cal-month {
+        padding: 18px 20px;
+        border-right: 1px solid #f1f5f9;
+        border-bottom: 1px solid #f1f5f9;
+        transition: background 0.15s;
+        cursor: default;
+        position: relative;
+    }
+    .cal-month:hover { background: #f8fafc; }
+    .cal-month:nth-child(4n) { border-right: none; }
+    .cal-month:nth-child(n+9) { border-bottom: none; }
+
+    /* 월 이름 */
+    .cal-month-name {
+        font-size: 11px; font-weight: 800; letter-spacing: 0.1em;
+        text-transform: uppercase; color: #94a3b8; margin-bottom: 10px;
+    }
+    /* 수치 행 */
+    .cal-vals {
+        display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px;
+    }
+    .cal-val-row {
+        display: flex; align-items: center; justify-content: space-between;
+    }
+    .cal-val-label {
+        font-size: 10.5px; color: #94a3b8; font-weight: 600;
+    }
+    .cal-val-num {
+        font-size: 15px; font-weight: 900; line-height: 1;
+    }
+    .cal-val-unit {
+        font-size: 9px; font-weight: 500; color: #94a3b8; margin-left: 1px;
+    }
+    /* DO 등급 바 */
+    .cal-do-bar-wrap {
+        height: 4px; background: #f1f5f9; border-radius: 99px; margin: 8px 0 6px;
+        overflow: hidden;
+    }
+    .cal-do-bar {
+        height: 100%; border-radius: 99px;
+        transition: width 0.3s ease;
+    }
+    /* 이벤트 태그 */
+    .cal-tag {
+        display: inline-block;
+        font-size: 10px; font-weight: 700;
+        padding: 2px 7px; border-radius: 99px;
+        margin-top: 4px;
+    }
+    /* 수직 구분선 (계절) */
+    .cal-season-hd {
+        grid-column: span 4;
+        background: #f8fafc;
+        padding: 8px 20px;
+        font-size: 11px; font-weight: 800;
+        color: #64748b; letter-spacing: 0.08em;
+        border-bottom: 1px solid #f1f5f9;
+        display: flex; align-items: center; gap: 8px;
+    }
+    /* 하단 인사이트 패널 */
+    .cal-insight-grid {
+        display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px;
+        margin-top: 20px;
+    }
+    .cal-insight-card {
+        border-radius: 14px; padding: 18px 20px;
+        border-left: 4px solid #e5e7eb;
+    }
+    .cal-insight-card.spring { background: #fefce8; border-left-color: #eab308; }
+    .cal-insight-card.summer { background: #fff1f2; border-left-color: #f43f5e; }
+    .cal-insight-card.autumn { background: #fff7ed; border-left-color: #f97316; }
+    .cal-insight-card.winter { background: #eff6ff; border-left-color: #3b82f6; }
+    .cal-insight-title {
+        font-size: 13px; font-weight: 800; color: #1e293b; margin-bottom: 8px;
+    }
+    .cal-insight-body {
+        font-size: 12.5px; color: #475569; line-height: 1.75;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+    # ── 월별 실제 데이터 집계 ─────────────────────────────────────────────────
+    df['month'] = df['date'].dt.month
+    cal_monthly = df.groupby('month').agg(
+        do_ny=('DO_노량진', 'mean'),
+        do_sy=('DO_선유',   'mean'),
+        ph_ny=('pH_노량진', 'mean'),
+        ph_sy=('pH_선유',   'mean'),
+        do_ny_min=('DO_노량진', 'min'),
+        do_sy_min=('DO_선유',   'min'),
+    ).reset_index()
+
+    # 지점 선택
+    t4_station = st.radio(
+        "기준 측정소", ["노량진", "선유", "두 지점 평균"],
+        horizontal=True, key="t4_station"
+    )
+
+    def get_do(row):
+        if t4_station == "노량진":   return row['do_ny']
+        elif t4_station == "선유":   return row['do_sy']
+        else:                        return (row['do_ny'] + row['do_sy']) / 2
+
+    def get_ph(row):
+        if t4_station == "노량진":   return row['ph_ny']
+        elif t4_station == "선유":   return row['ph_sy']
+        else:                        return (row['ph_ny'] + row['ph_sy']) / 2
+
+    def do_grade_color(v):
+        if v >= 7.5:   return "#22c55e", "#dcfce7", "🟢 1등급", 100
+        elif v >= 5.0: return "#f59e0b", "#fef3c7", "🟡 2~3등급", int((v-5)/2.5*100)
+        elif v >= 2.0: return "#f97316", "#ffedd5", "🟠 4등급",   int((v-2)/3*100)
+        else:           return "#ef4444", "#fee2e2", "🔴 5등급↓",  10
+
+    def ph_color(v):
+        if 7.0 <= v <= 8.0:   return "#2563eb"
+        elif v > 8.0:          return "#7c3aed"
+        else:                  return "#dc2626"
+
+    MONTH_NAMES = ['','JAN','FEB','MAR','APR','MAY','JUN',
+                   'JUL','AUG','SEP','OCT','NOV','DEC']
+    MONTH_KO    = ['','1월','2월','3월','4월','5월','6월',
+                   '7월','8월','9월','10월','11월','12월']
+
+    # 계절별 이벤트 태그 정의
+    EVENTS = {
+        1:  ("❄️ DO 최고", "#dbeafe", "#1d4ed8"),
+        2:  ("❄️ DO 안정", "#dbeafe", "#1d4ed8"),
+        3:  ("🌸 pH 급등", "#fae8ff", "#9333ea"),
+        4:  ("🌸 pH 최고", "#fae8ff", "#9333ea"),
+        5:  ("⚠️ DO 하락", "#fef3c7", "#b45309"),
+        6:  ("🚨 DO 위기", "#fee2e2", "#dc2626"),
+        7:  ("🚨 DO 최저", "#fee2e2", "#dc2626"),
+        8:  ("🚨 센서 결측", "#fee2e2", "#dc2626"),
+        9:  ("🍂 DO 회복", "#ffedd5", "#c2410c"),
+        10: ("✅ 1등급", "#dcfce7", "#15803d"),
+        11: ("✅ 최적 환경", "#dcfce7", "#15803d"),
+        12: ("❄️ DO 최고치", "#dbeafe", "#1d4ed8"),
+    }
+
+    SEASONS = [
+        (1,  "❄️ 겨울", [1, 2]),
+        (3,  "🌸 봄",   [3, 4, 5]),
+        (6,  "☀️ 여름", [6, 7, 8]),
+        (9,  "🍂 가을", [9, 10]),
+        (11, "❄️ 초겨울", [11, 12]),
     ]
-    for color, title, body in insights:
-        with st.expander(title):
-            st.markdown(f'<div class="ins-body">{body}</div>', unsafe_allow_html=True)
+
+    # DO 최대값 (바 너비 계산용)
+    do_max = 12.5
+
+    # ── 달력 HTML 생성 ────────────────────────────────────────────────────────
+    html = '<div class="cal-wrap">'
+
+    # 헤더
+    html += f"""
+    <div class="cal-header">
+        <div>
+            <div class="cal-header-title">📅 2020 한강 수질 월별 달력</div>
+            <div class="cal-header-sub">기준 측정소: {t4_station} · pH 및 DO(mg/L) 월평균</div>
+        </div>
+        <div class="cal-legend">
+            <div class="cal-legend-item"><div class="cal-legend-dot" style="background:#22c55e"></div>1등급 ≥7.5</div>
+            <div class="cal-legend-item"><div class="cal-legend-dot" style="background:#f59e0b"></div>2~3등급 ≥5.0</div>
+            <div class="cal-legend-item"><div class="cal-legend-dot" style="background:#f97316"></div>4등급 ≥2.0</div>
+            <div class="cal-legend-item"><div class="cal-legend-dot" style="background:#ef4444"></div>5등급↓</div>
+        </div>
+    </div>
+    <div class="cal-grid">"""
+
+    for _, row in cal_monthly.iterrows():
+        m = int(row['month'])
+        do_v = get_do(row)
+        ph_v = get_ph(row)
+        do_col, do_bg, grade_label, bar_pct = do_grade_color(do_v)
+        ph_col = ph_color(ph_v)
+        ev_label, ev_bg, ev_col = EVENTS.get(m, ("", "#f3f4f6", "#64748b"))
+        bar_w = int(do_v / do_max * 100)
+
+        html += f"""
+        <div class="cal-month">
+            <div class="cal-month-name">{MONTH_NAMES[m]} · {MONTH_KO[m]}</div>
+            <div class="cal-vals">
+                <div class="cal-val-row">
+                    <span class="cal-val-label">DO</span>
+                    <span>
+                        <span class="cal-val-num" style="color:{do_col}">{do_v:.2f}</span>
+                        <span class="cal-val-unit">mg/L</span>
+                    </span>
+                </div>
+                <div class="cal-do-bar-wrap">
+                    <div class="cal-do-bar" style="width:{bar_w}%;background:{do_col}"></div>
+                </div>
+                <div class="cal-val-row">
+                    <span class="cal-val-label">pH</span>
+                    <span>
+                        <span class="cal-val-num" style="color:{ph_col}">{ph_v:.2f}</span>
+                    </span>
+                </div>
+            </div>
+            <span class="cal-tag" style="background:{ev_bg};color:{ev_col}">{ev_label}</span>
+        </div>"""
+
+    html += '</div></div>'
+    st.markdown(html, unsafe_allow_html=True)
+
+    # ── 계절별 인사이트 카드 ──────────────────────────────────────────────────
+    st.markdown('<div class="sec-hd">계절별 수질 해석</div>', unsafe_allow_html=True)
+    st.markdown("""
+    <div class="cal-insight-grid">
+        <div class="cal-insight-card spring">
+            <div class="cal-insight-title">🌸 봄 (3–5월) — pH 급등 구간</div>
+            <div class="cal-insight-body">
+                수온 상승 → 플랑크톤 폭발 증식 → 광합성 왕성 → CO₂ 소비 → pH 상승의 연쇄.
+                노량진 <b>8.3</b>, 선유 <b>8.4</b>로 연중 최고치를 기록합니다.
+                봄철 오후 14–18시에 일중 pH 편차가 최대 <b>1.0 이상</b> 벌어집니다.
+            </div>
+        </div>
+        <div class="cal-insight-card summer">
+            <div class="cal-insight-title">☀️ 여름 (6–8월) — DO 위기 구간</div>
+            <div class="cal-insight-body">
+                노량진 6월 평균 DO <b>5.95 mg/L</b>, 선유 <b>5.51 mg/L</b>로 급락.
+                순간 최솟값 노량진 <b>2.1</b>, 선유 <b>2.0 mg/L</b>.
+                수온 상승 → 산소 용해도 감소(20°C: 9.1 → 30°C: 7.5 mg/L).
+                플랑크톤 사체 분해 시 박테리아 대량 산소 소비가 복합적으로 작용합니다.
+                8월 선유 센서 결측률 <b>58%</b> 주의.
+            </div>
+        </div>
+        <div class="cal-insight-card autumn">
+            <div class="cal-insight-title">🍂 가을 (9–10월) — 회복 구간</div>
+            <div class="cal-insight-body">
+                수온 하강 → DO 서서히 회복. 10월부터 DO ≥ 7.5 mg/L 달성,
+                환경부 <b>1등급</b> 수준으로 회복됩니다.
+                pH도 7.4–7.5로 중성 범위에 안정되며 수생태계에 쾌적한 환경입니다.
+            </div>
+        </div>
+        <div class="cal-insight-card winter">
+            <div class="cal-insight-title">❄️ 겨울 (11–12월) — DO 최고 구간</div>
+            <div class="cal-insight-body">
+                노량진 12월 평균 <b>11.17 mg/L</b>, 선유 <b>10.91 mg/L</b>로 연중 최고.
+                저수온일수록 기체 용해도가 높아져 DO가 포화 상태를 유지합니다.
+                pH는 7.4–7.5로 가장 안정적이며, 연중 수질이 가장 쾌적한 시기입니다.
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # ── 환경부 등급 요약 ──────────────────────────────────────────────────────
+    st.markdown('<div class="sec-hd" style="margin-top:24px">환경부 수질 등급 기준 대조</div>',
+                unsafe_allow_html=True)
+
+    grade_cols = st.columns(4)
+    grades = [
+        ("🟢 1등급", "매우 좋음", "DO ≥ 7.5", "pH 6.5–8.5", "상수원·자연보전", "10월–4월", "#dcfce7", "#15803d"),
+        ("🟡 2~3등급", "좋음·보통", "DO ≥ 5.0", "pH 6.5–8.5", "정수처리·농업용수", "봄·가을", "#fef3c7", "#b45309"),
+        ("🟠 4등급", "나쁨", "DO ≥ 2.0", "pH 6.0–8.5", "공업용수", "여름 순간값", "#ffedd5", "#c2410c"),
+        ("🔴 5등급↓", "매우 나쁨", "DO < 2.0", "pH <6.0 or >8.5", "용도 제한", "극한 상황", "#fee2e2", "#b91c1c"),
+    ]
+    for col, (grade, status, do_crit, ph_crit, use, when, bg, fc) in zip(grade_cols, grades):
+        with col:
+            st.markdown(f"""
+            <div style="background:{bg};border-radius:12px;padding:16px 18px;height:100%">
+                <div style="font-size:16px;font-weight:900;color:{fc};margin-bottom:4px">{grade}</div>
+                <div style="font-size:11px;font-weight:700;color:{fc};margin-bottom:10px;opacity:0.8">{status}</div>
+                <div style="font-size:12px;color:#374151;line-height:1.8">
+                    <b>DO:</b> {do_crit}<br>
+                    <b>pH:</b> {ph_crit}<br>
+                    <b>용도:</b> {use}<br>
+                    <b>2020 한강:</b> {when}
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
 
 with tab5:
     st.markdown('<div class="sec-hd">2026–2050 수질 예측 (기후변화 시나리오)</div>', unsafe_allow_html=True)
