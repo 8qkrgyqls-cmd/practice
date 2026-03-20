@@ -1268,6 +1268,11 @@ function togglePlay() {{
   if (playing) {{
     btn.textContent = '⏹ 정지';
     btn.className = 'ap-btn playing';
+    // 마지막 슬라이드에서 다시 재생 누르면 처음부터 시작
+    if (cur >= SLIDES.length - 1) {{
+      cur = 0;
+      goTo(0);
+    }}
     startProgress();
   }} else {{
     btn.textContent = '⏵ 자동재생';
