@@ -1317,66 +1317,18 @@ with tab5:
     # ── 컨트롤: 슬라이드 인덱스 세션 상태 ───────────────────────────────────
     if 'slide_idx' not in st.session_state:
         st.session_state.slide_idx = 0
+    if 'auto_on' not in st.session_state:
+        st.session_state.auto_on = False
 
-    # ── 컨트롤 영역 ──────────────────────────────────────────────────────────
-    # 자동재생: JS 타이머가 3초마다 "다음 →" 버튼을 자동 클릭하는 방식
-    # time.sleep+rerun은 슬라이드 내용 렌더링 전에 화면을 날려버리므로 사용 안 함
-    st.markdown("""
-    <style>
-    .ap-btn {
-        width:100%; padding:8px 0; border-radius:8px; border:1.5px solid #bfdbfe;
-        cursor:pointer; font-size:13px; font-weight:700; transition:all 0.2s;
-        background:#eff6ff; color:#1d4ed8;
-    }
-    .ap-btn.playing { background:#fee2e2; color:#b91c1c; border-color:#fecaca; }
-    #ap-prog-wrap { height:3px; background:#e2e8f0; border-radius:99px; margin-top:6px; overflow:hidden; display:none; }
-    #ap-prog-bar  { height:100%; background:#2563eb; border-radius:99px; width:0%; }
-    </style>
-    <button id="apBtn" class="ap-btn" onclick="apToggle()">⏵ 자동 재생</button>
-    <div id="ap-prog-wrap"><div id="ap-prog-bar"></div></div>
-    <script>
-    var _apTimer = null, _apProg = 0, _apDur = 3000, _apTick = 80;
-    function apToggle() {
-        if (_apTimer) { apStop(); } else { apStart(); }
-    }
-    function apStart() {
-        var btn = document.getElementById('apBtn');
-        btn.textContent = '⏹ 정지';
-        btn.className = 'ap-btn playing';
-        document.getElementById('ap-prog-wrap').style.display = 'block';
-        _apProg = 0;
-        _apTimer = setInterval(function() {
-            _apProg += _apTick;
-            var pct = Math.min(_apProg / _apDur * 100, 100);
-            document.getElementById('ap-prog-bar').style.width = pct + '%';
-            if (_apProg >= _apDur) { _apProg = 0; apClickNext(); }
-        }, _apTick);
-    }
-    function apStop() {
-        clearInterval(_apTimer); _apTimer = null; _apProg = 0;
-        var btn = document.getElementById('apBtn');
-        btn.textContent = '⏵ 자동 재생';
-        btn.className = 'ap-btn';
-        document.getElementById('ap-prog-wrap').style.display = 'none';
-        document.getElementById('ap-prog-bar').style.width = '0%';
-    }
-    function apClickNext() {
-        // iframe 부모 document에서 "다음 →" 버튼을 찾아 클릭
-        var doc = window.parent ? window.parent.document : document;
-        var btns = doc.querySelectorAll('button');
-        for (var i = 0; i < btns.length; i++) {
-            if (btns[i].innerText && btns[i].innerText.trim().startsWith('다음')) {
-                btns[i].click();
-                return;
-            }
-        }
-        // 마지막 슬라이드: 자동 정지
-        apStop();
-    }
-    </script>
-    """, unsafe_allow_html=True)
+    # ── 컨트롤: 자동재생 버튼 + 슬라이더 + 시나리오 ──────────────────────────
+    ctrl_col1, ctrl_col2, ctrl_col3 = st.columns([1, 3, 1])
 
-    ctrl_col2, ctrl_col3 = st.columns([4, 1])
+    with ctrl_col1:
+        btn_label = "⏹ 정지" if st.session_state.auto_on else "⏵ 자동재생"
+        btn_type  = "primary" if st.session_state.auto_on else "secondary"
+        if st.button(btn_label, use_container_width=True, type=btn_type, key="ap_btn"):
+            st.session_state.auto_on = not st.session_state.auto_on
+            st.rerun()
 
     with ctrl_col2:
         slide_names = [f"{s['icon']} {s['year']}년 — {s['label']}" for s in SLIDES]
@@ -1387,11 +1339,27 @@ with tab5:
             key="slide_slider",
             label_visibility="collapsed",
         )
-        st.session_state.slide_idx = slide_names.index(chosen)
+        new_idx = slide_names.index(chosen)
+        if new_idx != st.session_state.slide_idx:
+            st.session_state.slide_idx = new_idx
+            st.session_state.auto_on = False
 
     with ctrl_col3:
-        sc_toggle = st.radio("시나리오", ["양쪽 비교", "SSP2-4.5", "SSP5-8.5"],
-                             horizontal=False, key="sc_toggle", label_visibility="collapsed")
+        sc_toggle = st.radio(
+            "시나리오", ["양쪽 비교", "SSP2-4.5", "SSP5-8.5"],
+            horizontal=False, key="sc_toggle", label_visibility="collapsed"
+        )
+
+    # 자동재생 프로그레스 바 (슬라이드 위에 표시)
+    if st.session_state.auto_on:
+        st.markdown(
+            '''<div style="height:4px;background:#e2e8f0;border-radius:99px;
+            overflow:hidden;margin-bottom:8px">
+            <div style="height:100%;background:#2563eb;border-radius:99px;
+            animation:apFill 3s linear forwards"></div></div>
+            <style>@keyframes apFill{from{width:0%}to{width:100%}}</style>''',
+            unsafe_allow_html=True
+        )
 
 
     # ── 현재 슬라이드 데이터 ─────────────────────────────────────────────────
@@ -1515,21 +1483,16 @@ with tab5:
 
     st.markdown(tl_html, unsafe_allow_html=True)
 
-    # ── 이전/다음 버튼 ────────────────────────────────────────────────────────
-    nav1, nav2, nav3 = st.columns([1, 4, 1])
-    with nav1:
-        if st.button("← 이전", use_container_width=True, disabled=(idx == 0)):
-            st.session_state.slide_idx = max(0, idx - 1)
-            st.rerun()
-    with nav2:
-        st.markdown(
-            f'<div class="nav-hint">{idx+1} / {len(SLIDES)} — {slide["icon"]} {yr}년 {slide["label"]}</div>',
-            unsafe_allow_html=True
-        )
-    with nav3:
-        if st.button("다음 →", use_container_width=True, disabled=(idx == len(SLIDES)-1)):
-            st.session_state.slide_idx = min(len(SLIDES)-1, idx + 1)
-            st.rerun()
+    # ── 자동재생: 슬라이드 렌더링 완료 후 sleep → rerun (화면이 먼저 보임) ──
+    if st.session_state.auto_on:
+        import time
+        time.sleep(3)
+        if st.session_state.slide_idx < len(SLIDES) - 1:
+            st.session_state.slide_idx += 1
+        else:
+            st.session_state.auto_on = False  # 마지막 슬라이드 → 정지
+        st.rerun()
+
 
     st.divider()
 
